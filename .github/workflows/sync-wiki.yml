@@ -17,7 +17,7 @@ jobs:
 
       - name: Cloner le wiki
         run: |
-          git clone https://oauth2:${{ secrets.WIKI_TOKEN }}@github.com/Mastocodeur/git-fast-learn.wiki.git wiki
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Mastocodeur/git-fast-learn.wiki.git wiki
 
       - name: Copier les fichiers Markdown vers le wiki
         run: |
