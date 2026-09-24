@@ -19,7 +19,7 @@ jobs:
 
       - name: Cloner le wiki
         run: |
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Mastocodeur/git-fast-learn.wiki.git wiki
+          git clone https://x-access-token:${{ secrets.WIKI_TOKEN }}@github.com/Mastocodeur/git-fast-learn.wiki.git wiki
 
       - name: Copier les fichiers Markdown vers le wiki
         run: |
@@ -31,7 +31,7 @@ jobs:
           cd wiki
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Mastocodeur/git-fast-learn.wiki.git
+          git remote set-url origin https://x-access-token:${{ secrets.WIKI_TOKEN }}@github.com/Mastocodeur/git-fast-learn.wiki.git
           git add .
           git diff --staged --quiet || git commit -m "sync: mise à jour depuis le repo principal (${{ github.sha }})"
           git push
