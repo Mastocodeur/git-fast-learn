@@ -81,6 +81,7 @@ Le dossier `skills/` contient des instructions pour Claude Code (invocables via 
 
 > Ces skills sont des standards d'ingénierie personnels, applicables à tout projet Python / Azure / GitLab.
 
+
 ---
 
 ## Scénarios rapides
