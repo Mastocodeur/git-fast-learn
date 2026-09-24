@@ -1,0 +1,12 @@
+# NON-SECRET service target for UAT. Only the service differs per env —
+# everything else is shared in the entry file azure-pipelines.yml.
+# Never put a secret here (app secrets are secret pipeline variables).
+variables:
+  - name: environment
+    value: uat
+  - name: azureSubscription # ARM service connection for this env
+    value: "<AZU-EUR-WW-UAT-APP>"
+  - name: appName # Function App name for this env
+    value: "<FAS-EUR-FR-UAT-APP>"
+  - name: rgName # Resource Group for this env
+    value: "<RG-EUR-FR-UAT-APP>"

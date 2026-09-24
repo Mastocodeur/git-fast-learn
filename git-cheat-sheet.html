@@ -1,0 +1,1120 @@
+<title>Git Cheat Sheet</title>
+
+<style>
+/* ── PALETTE CHAUDE ──────────────────────────────────── */
+:root {
+  --bg:        #FDF7F0;
+  --surface:   #FFFBF7;
+  --surf-alt:  #FEF0E0;
+  --surf-up:   #FCDDB8;
+  --orange:    #C84B00;
+  --orange-m:  rgba(200,75,0,.11);
+  --yellow:    #B07800;
+  --yellow-m:  rgba(176,120,0,.11);
+  --red:       #B91C1C;
+  --red-m:     rgba(185,28,28,.11);
+  --text:      #1C1009;
+  --muted:     #6B5443;
+  --faint:     #A8917C;
+  --border:    #E5CEB4;
+  --border-s:  #C9A882;
+  --code-bg:   #FEF0E0;
+  --code-txt:  #C84B00;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:        #18100A;
+    --surface:   #221608;
+    --surf-alt:  #2E1E10;
+    --surf-up:   #3D2A18;
+    --orange:    #FF7233;
+    --orange-m:  rgba(255,114,51,.14);
+    --yellow:    #F5B800;
+    --yellow-m:  rgba(245,184,0,.13);
+    --red:       #FF4848;
+    --red-m:     rgba(255,72,72,.13);
+    --text:      #F5E8D5;
+    --muted:     #9E7D60;
+    --faint:     #5A3D28;
+    --border:    #3D2A18;
+    --border-s:  #5A3D28;
+    --code-bg:   #18100A;
+    --code-txt:  #FF7233;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#18100A;--surface:#221608;--surf-alt:#2E1E10;--surf-up:#3D2A18;
+  --orange:#FF7233;--orange-m:rgba(255,114,51,.14);
+  --yellow:#F5B800;--yellow-m:rgba(245,184,0,.13);
+  --red:#FF4848;--red-m:rgba(255,72,72,.13);
+  --text:#F5E8D5;--muted:#9E7D60;--faint:#5A3D28;
+  --border:#3D2A18;--border-s:#5A3D28;
+  --code-bg:#18100A;--code-txt:#FF7233;
+  color-scheme: dark;
+}
+
+/* ── BASE ─────────────────────────────────────────────── */
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+
+body {
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+  font-size:13.5px;
+  line-height:1.55;
+  background:var(--bg);
+  color:var(--text);
+  padding-inline:16px;
+}
+
+code {
+  font-family:Consolas,'Courier New',monospace;
+  font-size:.82em;
+}
+
+h1,h2,h3,h4 { font-weight:600; text-wrap:balance; }
+
+/* ── HEADER ───────────────────────────────────────────── */
+.hdr {
+  position:sticky;
+  top:env(safe-area-inset-top,0px);
+  z-index:200;
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  padding:10px 0;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.hdr-brand { display:flex; align-items:center; gap:9px; }
+
+.git-icon { width:24px; height:24px; flex-shrink:0; }
+
+.hdr h1 {
+  font-size:.95rem;
+  letter-spacing:-.02em;
+  line-height:1;
+  color:var(--text);
+}
+.hdr h1 em { color:var(--orange); font-style:normal; }
+
+.hdr-nav { display:flex; gap:2px; flex-wrap:wrap; }
+.hdr-nav a {
+  font-size:.71rem; font-weight:500;
+  color:var(--muted); padding:3px 8px; border-radius:4px;
+  text-decoration:none; white-space:nowrap;
+  transition:background .12s,color .12s;
+}
+.hdr-nav a:hover { background:var(--surf-alt); color:var(--text); }
+
+/* ── PAGE ─────────────────────────────────────────────── */
+.page {
+  max-width:1440px; margin:0 auto;
+  padding-block:22px;
+  display:flex; flex-direction:column; gap:26px;
+}
+
+/* ── SECTION HEAD ─────────────────────────────────────── */
+.sec-head { margin-bottom:11px; }
+.sec-eye {
+  font-size:.6rem; font-weight:600; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--orange);
+  margin-bottom:2px;
+}
+.sec-title { font-size:1.1rem; letter-spacing:-.02em; }
+
+/* ── CARD ─────────────────────────────────────────────── */
+.card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:14px 16px;
+}
+
+.card-head {
+  font-weight:600;
+  font-size:.7rem; text-transform:uppercase; letter-spacing:.07em;
+  color:var(--muted); margin-bottom:9px;
+  display:flex; align-items:center; gap:6px;
+}
+.card-head::before {
+  content:''; width:5px; height:5px; border-radius:50%;
+  background:var(--orange); flex-shrink:0;
+}
+
+/* ── TABLE ────────────────────────────────────────────── */
+.t-wrap { overflow-x:auto; border-radius:8px; border:1px solid var(--border); }
+table { width:100%; border-collapse:collapse; font-size:.82rem; }
+th {
+  background:var(--surf-alt); color:var(--muted);
+  font-weight:600; font-size:.68rem; text-transform:uppercase;
+  letter-spacing:.07em; padding:9px 13px;
+  text-align:left; border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+td {
+  padding:8px 13px; border-bottom:1px solid var(--border);
+  vertical-align:top; line-height:1.5;
+}
+tr:last-child td { border-bottom:none; }
+tbody tr:hover td { background:var(--surf-alt); }
+td code {
+  background:var(--code-bg); color:var(--code-txt);
+  padding:1px 5px; border-radius:3px;
+  border:1px solid var(--border); font-size:.76rem;
+  word-break:break-all;
+}
+
+/* ── PLATFORM HEADERS ─────────────────────────────────── */
+.plt {
+  display:flex; align-items:center; justify-content:center;
+  gap:5px; font-weight:600;
+  font-size:.85rem; padding:3px 0;
+}
+.plt-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.c-gh { color:#2563EB; } .d-gh { background:#2563EB; }
+.c-gl { color:#E8590C; } .d-gl { background:#E8590C; }
+.c-az { color:#0078D4; } .d-az { background:#0078D4; }
+
+/* ── PREFIX BADGES ────────────────────────────────────── */
+.pb {
+  display:inline-block; padding:2px 8px; border-radius:4px;
+  font-family:Consolas,'Courier New',monospace; font-size:.74rem;
+  font-weight:500; white-space:nowrap;
+}
+.pb-feat  { background:rgba(22,163,74,.12);  color:#16a34a; }
+.pb-fix   { background:var(--red-m);          color:var(--red); }
+.pb-docs  { background:var(--yellow-m);       color:var(--yellow); }
+.pb-style { background:rgba(234,88,12,.10);   color:#EA580C; }
+.pb-ref   { background:var(--orange-m);       color:var(--orange); }
+.pb-test  { background:rgba(124,58,237,.10);  color:#7C3AED; }
+.pb-chore { background:rgba(120,113,108,.12); color:var(--muted); }
+.pb-perf  { background:var(--yellow-m);       color:var(--yellow); }
+.pb-ci    { background:rgba(22,163,74,.12);   color:#16a34a; }
+.pb-rev   { background:var(--red-m);          color:var(--red); }
+
+/* ── BRANCH BADGE ─────────────────────────────────────── */
+.bb {
+  font-family:Consolas,'Courier New',monospace; font-size:.74rem;
+  background:var(--surf-alt); border:1px solid var(--border);
+  padding:1px 7px; border-radius:4px; white-space:nowrap;
+  color:var(--text); display:inline-block;
+}
+.bb-main { background:var(--orange-m); border-color:var(--orange); color:var(--orange); }
+.bb-dev  { background:var(--yellow-m); border-color:var(--yellow); color:var(--yellow); }
+
+/* ── 2-COL GRID ───────────────────────────────────────── */
+.two-col {
+  display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start;
+}
+@media(max-width:720px){ .two-col{ grid-template-columns:1fr; } }
+
+/* ── DEF TEXT ─────────────────────────────────────────── */
+.def-text p {
+  font-size:.88rem; color:var(--muted); margin-bottom:8px; line-height:1.65;
+}
+.def-text p strong { color:var(--text); }
+
+.kv { list-style:none; display:flex; flex-direction:column; gap:5px; margin-top:12px; }
+.kv li { display:flex; gap:10px; font-size:.82rem; align-items:flex-start; }
+.kv strong {
+  font-family:'JetBrains Mono',monospace; font-size:.76rem;
+  font-weight:500; color:var(--orange); min-width:76px; flex-shrink:0;
+  background:var(--orange-m); padding:1px 5px; border-radius:3px;
+  display:inline-block; margin-top:1px;
+}
+.kv span { color:var(--muted); }
+
+/* ── ZONES FLOW (vertical) ────────────────────────────── */
+.flow { display:flex; flex-direction:column; gap:0; }
+
+.flow-box {
+  background:var(--surf-alt); border:1px solid var(--border);
+  border-radius:6px; padding:9px 14px; text-align:center;
+}
+.flow-box .fb-name {
+  font-family:'Syne',sans-serif; font-size:.82rem; color:var(--text);
+}
+.flow-box .fb-desc { font-size:.68rem; color:var(--muted); margin-top:1px; }
+
+.flow-step {
+  display:flex; align-items:center; justify-content:center;
+  gap:8px; padding:5px 0;
+}
+.flow-step code {
+  background:var(--orange-m); color:var(--orange);
+  padding:2px 7px; border-radius:3px; font-size:.72rem; border:none;
+  font-family:Consolas,'Courier New',monospace;
+}
+.flow-step .arr { color:var(--faint); font-size:.9rem; }
+
+/* reverse flow */
+.flow-rev .flow-step code {
+  background:var(--yellow-m); color:var(--yellow);
+}
+
+/* ── CMD GRID ─────────────────────────────────────────── */
+.cmd-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+  gap:10px;
+}
+.cmd-list { list-style:none; display:flex; flex-direction:column; gap:3px; }
+.cmd-list li {
+  padding:5px 8px; border-radius:5px;
+  background:var(--surf-alt);
+  display:flex; flex-direction:column; gap:2px;
+  overflow:hidden;
+}
+.cmd-list code {
+  color:var(--code-txt); font-size:.74rem;
+  white-space:nowrap; overflow:hidden;
+  text-overflow:ellipsis; display:block;
+}
+.cmd-list li:hover code { white-space:normal; word-break:break-all; }
+.cmd-list span { font-size:.69rem; color:var(--muted); line-height:1.4; }
+/* Variante pour les cartes larges — le code passe à la ligne plutôt que d'être coupé */
+.cmd-wide code { white-space:normal; word-break:break-word; overflow:visible; text-overflow:unset; }
+.cmd-wide li  { overflow:visible; gap:3px; }
+.cmd-wide span { font-size:.72rem; }
+
+/* ── HIERARCHY ────────────────────────────────────────── */
+.hier {
+  font-family:Consolas,'Courier New',monospace; font-size:.77rem;
+  background:var(--surf-alt); border:1px solid var(--border);
+  border-radius:6px; padding:12px 16px; line-height:1.95;
+  overflow-x:auto; white-space:pre;
+}
+.h-b { color:var(--yellow); }
+.h-o { color:var(--orange); }
+.h-r { color:var(--red); }
+.h-m { color:var(--faint); }
+.h-l { font-family:'DM Sans',sans-serif; font-size:.75em; color:var(--muted); font-style:italic; }
+
+/* ── BEST PRACTICES ───────────────────────────────────── */
+.bp-box {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-left:3px solid var(--orange);
+  border-radius:8px; padding:18px 22px;
+}
+
+.bp-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:20px; margin-top:14px;
+}
+
+.bp-block h4 {
+  font-weight:700;
+  font-size:.74rem; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--orange); margin-bottom:8px;
+}
+
+.tag {
+  display:inline-block; font-size:.67rem; font-weight:600;
+  padding:1px 8px; border-radius:3px; margin-bottom:7px;
+  white-space:nowrap;
+}
+.tag-o { background:var(--orange-m); color:var(--orange); }
+.tag-y { background:var(--yellow-m); color:var(--yellow); }
+.tag-r { background:var(--red-m);    color:var(--red); }
+
+.steps { list-style:none; display:flex; flex-direction:column; gap:5px; }
+.steps li {
+  display:flex; align-items:flex-start; gap:8px;
+  font-size:.81rem; color:var(--muted);
+}
+.sn {
+  width:18px; height:18px; border-radius:50%;
+  background:var(--surf-alt); border:1px solid var(--border);
+  font-size:.63rem; display:flex; align-items:center; justify-content:center;
+  color:var(--muted); flex-shrink:0; margin-top:1px;
+  font-family:Consolas,'Courier New',monospace;
+}
+.sn-warn { background:var(--red-m); border-color:var(--red); color:var(--red); font-weight:600; }
+.steps code {
+  background:var(--code-bg); color:var(--code-txt);
+  padding:0 4px; border-radius:3px;
+  word-break:break-all;
+}
+
+.rules { list-style:none; display:flex; flex-direction:column; gap:5px; }
+.rules li {
+  display:flex; gap:8px; align-items:flex-start;
+  font-size:.81rem; color:var(--muted);
+}
+.rules li::before {
+  content:''; width:5px; height:5px; border-radius:50%;
+  background:var(--orange); flex-shrink:0; margin-top:5px;
+}
+.rules strong { color:var(--text); }
+.rules code {
+  background:var(--code-bg); color:var(--code-txt);
+  padding:0 4px; border-radius:3px; font-size:.8em;
+}
+
+/* ── RESPONSIVE ───────────────────────────────────────── */
+@media(max-width:600px){
+  .hdr-nav { display:none; }
+  .cmd-grid { grid-template-columns:1fr 1fr; }
+}
+</style>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<header class="hdr">
+  <div class="hdr-brand">
+    <svg class="git-icon" viewBox="0 0 92 92" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path fill="var(--orange)" d="M90.155 41.965 50.035 1.845a5.857 5.857 0 0 0-8.278 0l-8.232 8.232 10.443 10.443a6.953 6.953 0 0 1 8.79 8.861l10.066 10.066a6.955 6.955 0 1 1-4.172 4.172L48.757 33.232v25.77a6.958 6.958 0 1 1-5.734-.283V32.99a6.959 6.959 0 0 1-3.744-9.136L29.038 13.411 1.845 40.604a5.857 5.857 0 0 0 0 8.277l40.12 40.12a5.857 5.857 0 0 0 8.277 0l40.012-40.012a5.858 5.858 0 0 0-.099-8.024z"/>
+    </svg>
+    <h1><em>Git</em> Cheat Sheet</h1>
+  </div>
+  <nav class="hdr-nav" aria-label="Sections">
+    <a href="#definition">Définition</a>
+    <a href="#config">Config &amp; SSH</a>
+    <a href="#commandes">Commandes</a>
+    <a href="#commits">Commits</a>
+    <a href="#branches">Branches</a>
+    <a href="#plateformes">Plateformes</a>
+    <a href="#comparaisons">Comparaisons</a>
+    <a href="#corriger">Reset &amp; Reflog</a>
+    <a href="#pratiques">Bonnes pratiques</a>
+  </nav>
+</header>
+
+<main class="page">
+
+  <!-- ── 01 DÉFINITION ─────────────────────────────────── -->
+  <section id="definition">
+    <div class="sec-head">
+      <div class="sec-eye">01 — Définition</div>
+      <h2 class="sec-title">Qu'est-ce que Git ?</h2>
+    </div>
+    <div class="two-col">
+
+      <!-- Définition + concepts -->
+      <div class="card">
+        <div class="def-text">
+          <p><strong>Git</strong> est un système de contrôle de version <strong>distribué</strong>. Chaque développeur possède une copie complète du dépôt, historique inclus. On peut travailler hors ligne et synchroniser ensuite.</p>
+          <p>Git stocke des <strong>instantanés</strong> (snapshots) complets à chaque commit, pas des diffs. Chaque commit reçoit un <strong>SHA-1</strong> unique calculé à partir de son contenu.</p>
+        </div>
+        <ul class="kv">
+          <li><strong>Distribué</strong><span>Pas de serveur central obligatoire — chaque clone est complet</span></li>
+          <li><strong>Snapshots</strong><span>Chaque commit = état complet de l'arbre de fichiers</span></li>
+          <li><strong>SHA-1</strong><span>Identifiant de 40 caractères hex, infalsifiable</span></li>
+          <li><strong>Branches</strong><span>Simples pointeurs sur un commit — création quasi instantanée</span></li>
+          <li><strong>HEAD</strong><span>Pointeur indiquant la position courante dans l'historique</span></li>
+          <li><strong>Index</strong><span>Autre nom du Staging Area — la zone de préparation des commits</span></li>
+        </ul>
+      </div>
+
+      <!-- Les 3 zones -->
+      <div class="card">
+        <div class="card-head">Les 3 zones + Remote</div>
+
+        <div class="flow">
+          <div class="flow-box">
+            <div class="fb-name">Working Directory</div>
+            <div class="fb-desc">Fichiers sur le disque, état actuel</div>
+          </div>
+          <div class="flow-step">
+            <code>git add</code>
+            <span class="arr">↓</span>
+          </div>
+          <div class="flow-box">
+            <div class="fb-name">Staging Area (Index)</div>
+            <div class="fb-desc">Instantané préparé pour le prochain commit</div>
+          </div>
+          <div class="flow-step">
+            <code>git commit</code>
+            <span class="arr">↓</span>
+          </div>
+          <div class="flow-box">
+            <div class="fb-name">Repository local</div>
+            <div class="fb-desc">Historique des commits dans <code>.git/</code></div>
+          </div>
+          <div class="flow-step">
+            <code>git push</code>
+            <span class="arr">↓</span>
+          </div>
+          <div class="flow-box">
+            <div class="fb-name">Remote</div>
+            <div class="fb-desc">GitHub / GitLab / Azure DevOps</div>
+          </div>
+        </div>
+
+        <div class="card-head" style="margin-top:12px;">Sens inverse</div>
+        <div class="flow flow-rev">
+          <div class="flow-box">
+            <div class="fb-name">Remote</div>
+          </div>
+          <div class="flow-step">
+            <code>git fetch</code>
+            <span class="arr">↓</span>
+          </div>
+          <div class="flow-box">
+            <div class="fb-name">Repository local</div>
+          </div>
+          <div class="flow-step">
+            <code>git checkout / restore</code>
+            <span class="arr">↓</span>
+          </div>
+          <div class="flow-box">
+            <div class="fb-name">Working Directory</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── 02 CONFIG & SSH ──────────────────────────────── -->
+  <section id="config">
+    <div class="sec-head">
+      <div class="sec-eye">02 — Setup</div>
+      <h2 class="sec-title">Configuration initiale &amp; SSH</h2>
+    </div>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">À faire <strong>une seule fois</strong> sur chaque nouvelle machine. Ces réglages sont globaux (<code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">--global</code>) et s'appliquent à tous vos dépôts. La clé SSH remplace l'authentification par mot de passe pour chaque push.</p>
+
+    <div class="two-col">
+
+      <!-- Colonne gauche : git config + SSH empilés -->
+      <div style="display:flex;flex-direction:column;gap:14px;">
+
+        <!-- git config -->
+        <div class="card" style="border-top:2px solid var(--orange);">
+          <div class="card-head" style="color:var(--orange);margin-bottom:10px;">git config — identité, éditeur, comportements</div>
+          <ul class="cmd-list cmd-wide" style="font-size:.8rem;">
+            <li><code>git config --global user.name "Prénom Nom"</code><span>Identité affichée sur chaque commit — doit correspondre à votre compte plateforme</span></li>
+            <li><code>git config --global user.email "mail@example.com"</code><span>Email associé aux commits</span></li>
+            <li><code>git config --global core.editor "code --wait"</code><span>VS Code comme éditeur pour les messages longs</span></li>
+            <li><code>git config --global init.defaultBranch main</code><span>Branche initiale nommée <code>main</code> (et non <code>master</code>)</span></li>
+            <li><code>git config --global pull.rebase true</code><span><code>git pull</code> = fetch + rebase — évite les commits de merge parasites</span></li>
+            <li><code>git config --global push.autoSetupRemote true</code><span><code>git push</code> sans <code>--set-upstream</code> sur la première fois — Git ≥ 2.37</span></li>
+            <li><code>git config --list</code><span>Afficher toute la configuration active (globale + locale)</span></li>
+            <li><code>git config --global --edit</code><span>Ouvrir <code>~/.gitconfig</code> dans l'éditeur</span></li>
+          </ul>
+        </div>
+
+        <!-- SSH -->
+        <div class="card" style="border-top:2px solid var(--yellow);">
+          <div class="card-head" style="color:var(--yellow);margin-bottom:10px;">Clé SSH — connexion sans mot de passe</div>
+          <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">SSH authentifie votre machine auprès de GitHub / GitLab / Azure DevOps. Une fois configuré, plus aucun mot de passe à chaque push.</p>
+          <ol style="list-style:none;display:flex;flex-direction:column;gap:9px;font-size:.8rem;">
+            <li style="display:flex;gap:8px;align-items:flex-start;">
+              <span style="color:var(--orange);font-weight:700;flex-shrink:0;min-width:18px;">1.</span>
+              <div><strong style="color:var(--text);">Générer la clé (ED25519 — algorithme recommandé)</strong><br>
+              <code style="background:var(--code-bg);color:var(--code-txt);padding:1px 5px;border-radius:3px;display:inline-block;margin-top:4px;">ssh-keygen -t ed25519 -C "mail@example.com"</code></div>
+            </li>
+            <li style="display:flex;gap:8px;align-items:flex-start;">
+              <span style="color:var(--orange);font-weight:700;flex-shrink:0;min-width:18px;">2.</span>
+              <div><strong style="color:var(--text);">Copier la clé publique</strong><br>
+              <code style="background:var(--code-bg);color:var(--code-txt);padding:1px 5px;border-radius:3px;display:inline-block;margin-top:4px;">cat ~/.ssh/id_ed25519.pub</code></div>
+            </li>
+            <li style="display:flex;gap:8px;align-items:flex-start;">
+              <span style="color:var(--orange);font-weight:700;flex-shrink:0;min-width:18px;">3.</span>
+              <div><strong style="color:var(--text);">Coller sur la plateforme</strong><br>
+              <span style="color:var(--muted);line-height:1.7;display:block;margin-top:4px;">GitHub → <em>Settings → SSH and GPG keys</em><br>
+              GitLab → <em>Preferences → SSH Keys</em><br>
+              Azure DevOps → <em>User Settings → SSH public keys</em></span></div>
+            </li>
+            <li style="display:flex;gap:8px;align-items:flex-start;">
+              <span style="color:var(--orange);font-weight:700;flex-shrink:0;min-width:18px;">4.</span>
+              <div><strong style="color:var(--text);">Tester la connexion</strong><br>
+              <code style="background:var(--code-bg);color:var(--code-txt);padding:1px 5px;border-radius:3px;display:inline-block;margin-top:4px;">ssh -T git@github.com</code></div>
+            </li>
+          </ol>
+          <div style="margin-top:10px;padding:7px 10px;background:var(--yellow-m);border-radius:5px;font-size:.77rem;color:var(--muted);">
+            Ajouter la clé <strong>publique</strong> (<code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">.pub</code>) sur la plateforme — <strong>jamais la clé privée</strong>.
+          </div>
+        </div>
+
+      </div><!-- /colonne gauche -->
+
+      <!-- Colonne droite : Aliases -->
+      <div class="card" style="border-top:2px solid var(--red);">
+        <div class="card-head" style="color:var(--red);margin-bottom:10px;">Aliases — raccourcis personnalisés</div>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">Les aliases transforment une commande longue en un raccourci court. Définis dans <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">~/.gitconfig</code>, ils sont disponibles dans tous les dépôts.</p>
+        <ul class="cmd-list cmd-wide" style="font-size:.8rem;margin-bottom:14px;">
+          <li><code>git config --global alias.lg "log --oneline --graph --all --decorate"</code><span>Historique graphique compact — la plus utile au quotidien</span></li>
+          <li><code>git config --global alias.st "status"</code><span><code>git st</code> au lieu de <code>git status</code></span></li>
+          <li><code>git config --global alias.co "checkout"</code><span><code>git co feat/x</code> au lieu de <code>git checkout feat/x</code></span></li>
+          <li><code>git config --global alias.br "branch"</code><span>Lister et naviguer entre les branches rapidement</span></li>
+        </ul>
+        <div class="card-head" style="margin-bottom:6px;">Template <code style="font-weight:400;">~/.gitconfig</code> complet</div>
+        <div class="hier" style="font-size:.75rem;line-height:1.75;">[user]
+    name  = Prénom Nom
+    email = mail@example.com
+[core]
+    editor = code --wait
+[init]
+    defaultBranch = main
+[pull]
+    rebase = true
+[push]
+    autoSetupRemote = true
+[alias]
+    lg = log --oneline --graph --all --decorate
+    st = status
+    co = checkout
+    br = branch</div>
+      </div><!-- /colonne droite aliases -->
+
+    </div><!-- /two-col -->
+  </section>
+
+  <!-- ── 03 COMMANDES ──────────────────────────────────── -->
+  <section id="commandes">
+    <div class="sec-head">
+      <div class="sec-eye">03 — Référence</div>
+      <h2 class="sec-title">Principales commandes</h2>
+    </div>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">Les commandes du quotidien, classées par usage. La grande majorité des interactions Git se résument à ces six familles — maîtrisez-les et vous couvrez 95% des situations rencontrées en équipe.</p>
+    <div class="cmd-grid">
+
+      <div class="card">
+        <div class="card-head">Configuration &amp; init</div>
+        <ul class="cmd-list">
+          <li><code>git config --global user.name "Nom"</code><span>Définir son identité globale</span></li>
+          <li><code>git config --global user.email "mail"</code><span>Email associé aux commits</span></li>
+          <li><code>git config --list</code><span>Afficher la configuration active</span></li>
+          <li><code>git init</code><span>Initialiser un dépôt local</span></li>
+          <li><code>git clone &lt;url&gt;</code><span>Cloner un dépôt distant</span></li>
+          <li><code>git remote -v</code><span>Lister les remotes configurés</span></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-head">Quotidien</div>
+        <ul class="cmd-list">
+          <li><code>git status</code><span>État du working directory</span></li>
+          <li><code>git add &lt;fichier&gt;</code><span>Stager un fichier</span></li>
+          <li><code>git add -p</code><span>Stager par hunks (interactif)</span></li>
+          <li><code>git commit -m "msg"</code><span>Créer un commit</span></li>
+          <li><code>git diff</code><span>Modifs non-stagées</span></li>
+          <li><code>git diff --staged</code><span>Ce qui sera commité</span></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-head">Branches</div>
+        <ul class="cmd-list">
+          <li><code>git checkout -b &lt;nom&gt;</code><span>Créer et basculer sur une branche</span></li>
+          <li><code>git switch &lt;nom&gt;</code><span>Changer de branche (syntaxe moderne)</span></li>
+          <li><code>git branch -d &lt;nom&gt;</code><span>Supprimer une branche locale</span></li>
+          <li><code>git merge &lt;branche&gt;</code><span>Fusionner — crée un merge commit</span></li>
+          <li><code>git rebase &lt;branche&gt;</code><span>Rejouer ses commits dessus</span></li>
+          <li><code>git rebase -i HEAD~N</code><span>Réécrire les N derniers commits</span></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-head">Remote</div>
+        <ul class="cmd-list">
+          <li><code>git fetch origin</code><span>Télécharger sans modifier le local</span></li>
+          <li><code>git pull origin &lt;branche&gt;</code><span>fetch + merge (automatique)</span></li>
+          <li><code>git push origin &lt;branche&gt;</code><span>Pousser sa branche</span></li>
+          <li><code>git push --force-with-lease</code><span>Force push sécurisé (après rebase)</span></li>
+          <li><code>git push origin --delete &lt;b&gt;</code><span>Supprimer une branche distante</span></li>
+          <li><code>git remote add origin &lt;url&gt;</code><span>Ajouter un remote</span></li>
+          <li><code>git tag -a v1.0.0 -m "msg"</code><span>Créer un tag annoté (release)</span></li>
+          <li><code>git push origin --tags</code><span>Pousser tous les tags</span></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-head">Inspection</div>
+        <ul class="cmd-list">
+          <li><code>git log --oneline --graph --all</code><span>Historique graphique complet</span></li>
+          <li><code>git log --author="Nom" -10</code><span>10 derniers commits d'un auteur</span></li>
+          <li><code>git blame &lt;fichier&gt;</code><span>Qui a écrit quelle ligne</span></li>
+          <li><code>git show &lt;sha&gt;</code><span>Détail d'un commit</span></li>
+          <li><code>git stash list</code><span>Lister les stashs</span></li>
+          <li><code>git reflog</code><span>Tous les mouvements de HEAD</span></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-head">Annuler / Corriger</div>
+        <ul class="cmd-list">
+          <li><code>git restore &lt;fichier&gt;</code><span>Annuler les modifs non-stagées</span></li>
+          <li><code>git restore --staged &lt;f&gt;</code><span>Désindexer (unstage) un fichier</span></li>
+          <li><code>git reset --soft HEAD~1</code><span>Défaire commit, garder staging</span></li>
+          <li><code>git reset --hard HEAD~1</code><span>Effacer commit ET modifs ⚠</span></li>
+          <li><code>git revert &lt;sha&gt;</code><span>Annuler un commit déjà pushé</span></li>
+          <li><code>git commit --amend --no-edit</code><span>Ajouter un fichier au dernier commit</span></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Résolution de conflits — bloc pleine largeur -->
+    <div style="margin-top:14px;background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--red);border-radius:8px;padding:14px 16px;">
+      <div class="card-head" style="color:var(--red);margin-bottom:6px;">Résolution de conflits</div>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px;line-height:1.6;">Un conflit survient quand deux branches ont modifié <strong>la même zone d'un fichier</strong> et que Git ne peut pas choisir automatiquement quelle version garder. Git insère alors des marqueurs dans le fichier et attend que vous tranchiez.</p>
+
+      <div style="display:flex;flex-direction:column;gap:12px;">
+
+        <!-- Anatomie + Procédure côte à côte -->
+        <div class="two-col">
+          <div>
+            <div style="font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Anatomie d'un conflit</div>
+            <div class="hier" style="font-size:.79rem;line-height:1.9;"><span class="h-r">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>
+<span class="h-m">result = compute_mean(values)</span>
+<span class="h-o">======= </span>
+<span class="h-b">result = compute_weighted_mean(values, w)</span>
+<span class="h-b">&gt;&gt;&gt;&gt;&gt;&gt;&gt; feat/weighted-metrics</span></div>
+            <div style="margin-top:8px;font-size:.78rem;color:var(--muted);line-height:1.7;">
+              <span style="color:var(--red);font-weight:600;">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span> — début de votre version (branche courante)<br>
+              <span style="color:var(--orange);font-weight:600;">=======</span> — séparateur entre les deux versions<br>
+              <span style="color:var(--yellow);font-weight:600;">&gt;&gt;&gt;&gt;&gt;&gt;&gt;</span> — version entrante (branche mergée / rebasée)
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Procédure de résolution</div>
+            <ol style="list-style:none;display:flex;flex-direction:column;gap:8px;font-size:.8rem;color:var(--muted);">
+              <li style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--orange);font-weight:700;flex-shrink:0;min-width:18px;">1.</span><span>Ouvrir le fichier — VS Code affiche <em>"Accept Current · Accept Incoming · Accept Both"</em> directement dans l'éditeur</span></li>
+              <li style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--orange);font-weight:700;flex-shrink:0;min-width:18px;">2.</span><span>Choisir la bonne version ou combiner les deux manuellement — supprimer <strong>absolument tous</strong> les marqueurs (<code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">&lt;&lt;&lt;</code>, <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">===</code>, <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">&gt;&gt;&gt;</code>)</span></li>
+              <li style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--orange);font-weight:700;flex-shrink:0;min-width:18px;">3.</span><span><code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">git add &lt;fichier&gt;</code> — indiquer à Git que ce fichier est résolu</span></li>
+              <li style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--orange);font-weight:700;flex-shrink:0;min-width:18px;">4.</span><span><code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">git merge --continue</code> ou <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">git rebase --continue</code> — reprendre l'opération</span></li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Commandes utiles — pleine largeur, 2 colonnes -->
+        <div>
+          <div style="font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Commandes clés</div>
+          <ul class="cmd-list cmd-wide" style="font-size:.79rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:4px;">
+            <li><code>git status</code><span>Lister les fichiers en conflit — marqués <em>both modified</em></span></li>
+            <li><code>git diff</code><span>Afficher tous les marqueurs de conflit restants dans les fichiers</span></li>
+            <li><code>git merge --abort</code><span>Annuler l'opération de merge — revenir à l'état exact d'avant</span></li>
+            <li><code>git rebase --abort</code><span>Annuler le rebase en cours — revenir à l'état d'avant</span></li>
+            <li><code>git checkout --ours &lt;fichier&gt;</code><span>Accepter entièrement votre version (HEAD) pour ce fichier</span></li>
+            <li><code>git checkout --theirs &lt;fichier&gt;</code><span>Accepter entièrement la version entrante pour ce fichier</span></li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 03 COMMITS ────────────────────────────────────── -->
+  <section id="commits">
+    <div class="sec-head">
+      <div class="sec-eye">04 — Conventional Commits</div>
+      <h2 class="sec-title">Préfixes de commit</h2>
+    </div>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">La convention <strong>Conventional Commits</strong> impose un format structuré aux messages de commit : <code style="background:var(--code-bg);color:var(--code-txt);padding:1px 5px;border-radius:3px;">&lt;type&gt;(&lt;scope&gt;): &lt;description&gt;</code>. Un bon commit répond à <em>« qu'est-ce que ce code fait ? »</em> — au présent impératif, en minuscules, sans point final, sous 72 caractères. Le type indique la nature du changement et permet de générer des changelogs automatiquement.</p>
+    <div class="t-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Préfixe</th>
+            <th>Usage</th>
+            <th>Exemple</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="pb pb-feat">feat</span></td><td>Nouvelle fonctionnalité métier (endpoint, algorithme, page)</td><td><code>feat(auth): ajouter l'authentification OAuth2</code></td></tr>
+          <tr><td><span class="pb pb-fix">fix</span></td><td>Correction de bug — comportement incorrect ou erreur</td><td><code>fix(pipeline): corriger le calcul sur les nulls</code></td></tr>
+          <tr><td><span class="pb pb-docs">docs</span></td><td>Documentation uniquement, sans toucher au code fonctionnel</td><td><code>docs(readme): mettre à jour l'installation</code></td></tr>
+          <tr><td><span class="pb pb-style">style</span></td><td>Formatage, espaces, virgules — sans changement logique</td><td><code>style: ruff format sur src/</code></td></tr>
+          <tr><td><span class="pb pb-ref">refactor</span></td><td>Restructuration sans ajout de feature ni correction de bug</td><td><code>refactor(loader): extraire la normalisation</code></td></tr>
+          <tr><td><span class="pb pb-test">test</span></td><td>Ajout ou correction de tests, sans toucher au code de prod</td><td><code>test(loader): ajouter les tests unitaires</code></td></tr>
+          <tr><td><span class="pb pb-chore">chore</span></td><td>Maintenance : dépendances, config CI, outils de dev</td><td><code>chore(deps): mettre à jour pandas 2.2.0</code></td></tr>
+          <tr><td><span class="pb pb-perf">perf</span></td><td>Optimisation des performances sans changement fonctionnel</td><td><code>perf(query): optimiser le batch processing</code></td></tr>
+          <tr><td><span class="pb pb-ci">ci</span></td><td>Modification d'un fichier de pipeline CI/CD</td><td><code>ci: ajouter le lint step à la pipeline</code></td></tr>
+          <tr><td><span class="pb pb-rev">revert</span></td><td>Retour arrière sur un commit précédent</td><td><code>revert: annuler la migration défectueuse</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.77rem;color:var(--muted);margin-top:8px;padding-inline:2px;">
+      Format&nbsp;: <code style="background:var(--code-bg);color:var(--code-txt);padding:1px 6px;border-radius:3px;">&lt;type&gt;(&lt;scope&gt;): &lt;description impérative, ≤72 car., minuscule, sans point final&gt;</code>
+    </p>
+  </section>
+
+  <!-- ── 04 BRANCHES ───────────────────────────────────── -->
+  <section id="branches">
+    <div class="sec-head">
+      <div class="sec-eye">05 — Stratégie</div>
+      <h2 class="sec-title">Branches</h2>
+    </div>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">Une branche Git est un <strong>simple pointeur</strong> sur un commit — la créer ne copie aucun fichier, c'est quasi-instantané. Le principe de base : <strong>une tâche = une branche</strong>, la plus courte possible. Plus une branche vit longtemps, plus elle diverge de <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">main</code> et plus les conflits s'accumulent. On ne travaille jamais directement sur <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">main</code> ou <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">dev</code>.</p>
+    <div class="two-col">
+
+      <div class="t-wrap">
+        <table>
+          <thead><tr><th>Type</th><th>Usage</th><th>Durée de vie</th></tr></thead>
+          <tbody>
+            <tr><td><span class="bb bb-main">main</span></td><td>Production — code stable et déployé</td><td>Permanente</td></tr>
+            <tr><td><span class="bb bb-dev">dev</span></td><td>Intégration — reçoit toutes les PR de feature</td><td>Permanente</td></tr>
+            <tr><td><span class="bb">feature/</span></td><td>Nouvelle fonctionnalité</td><td>3–5 jours max</td></tr>
+            <tr><td><span class="bb">fix/</span></td><td>Correction de bug</td><td>3–5 jours max</td></tr>
+            <tr><td><span class="bb">refactor/</span></td><td>Restructuration sans changement visible</td><td>3–5 jours max</td></tr>
+            <tr><td><span class="bb">hotfix/</span></td><td>Bug critique en production — créée depuis main</td><td>Quelques heures</td></tr>
+            <tr><td><span class="bb">docs/</span></td><td>Documentation uniquement</td><td>1–2 jours</td></tr>
+            <tr><td><span class="bb">chore/</span></td><td>Dépendances, CI, config — sans impact métier</td><td>1–2 jours</td></tr>
+            <tr><td><span class="bb">experiment/</span></td><td>Exploration — pas forcément destinée à merger</td><td>Libre</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-head">Hiérarchie &amp; flux de travail</div>
+        <div class="hier"><span class="h-b">feature/x</span>  <span class="h-m">──┐</span>
+<span class="h-b">fix/y     </span>  <span class="h-m">  ├──►</span> <span class="h-o">dev</span> <span class="h-m">──►</span> <span class="h-r">main</span> <span class="h-l">→ prod</span>
+<span class="h-b">refactor/z</span>  <span class="h-m">──┘</span></div>
+
+        <div class="card-head" style="margin-top:12px;">Flux complet</div>
+        <ol style="list-style:none;display:flex;flex-direction:column;gap:4px;font-size:.81rem;color:var(--muted);">
+          <li style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--orange);font-family:'JetBrains Mono',monospace;font-size:.72rem;min-width:18px;">1.</span><span>Créer depuis dev&nbsp;: <code style="background:var(--code-bg);color:var(--code-txt);padding:0 4px;border-radius:3px;">git checkout -b feature/x</code></span></li>
+          <li style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--orange);font-family:'JetBrains Mono',monospace;font-size:.72rem;min-width:18px;">2.</span><span>Travailler, commiter, pousser</span></li>
+          <li style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--orange);font-family:'JetBrains Mono',monospace;font-size:.72rem;min-width:18px;">3.</span><span>PR <code style="background:var(--code-bg);color:var(--code-txt);padding:0 4px;border-radius:3px;">feature/x → dev</code> — code review</span></li>
+          <li style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--orange);font-family:'JetBrains Mono',monospace;font-size:.72rem;min-width:18px;">4.</span><span>Merge dans dev après approbation</span></li>
+          <li style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--orange);font-family:'JetBrains Mono',monospace;font-size:.72rem;min-width:18px;">5.</span><span>PR <code style="background:var(--code-bg);color:var(--code-txt);padding:0 4px;border-radius:3px;">dev → main</code> — validation finale</span></li>
+          <li style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--orange);font-family:'JetBrains Mono',monospace;font-size:.72rem;min-width:18px;">6.</span><span>Merge main → déploiement automatique CI/CD</span></li>
+        </ol>
+
+        <div class="card-head" style="margin-top:12px;">Hotfix (bug critique prod)</div>
+        <div class="hier"><span class="h-r">main</span> <span class="h-m">──►</span> <span class="h-b">hotfix/fix-crash</span>
+<span class="h-l">Corriger → PR → main → tag vX.Y.Z</span>
+<span class="h-l">Puis merger main dans dev</span></div>
+      </div>
+
+    </div>
+
+    <!-- Detached HEAD -->
+    <div style="margin-top:14px;background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--yellow);border-radius:8px;padding:14px 16px;">
+      <div class="card-head" style="color:var(--yellow);margin-bottom:8px;">Detached HEAD — qu'est-ce que c'est ?</div>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px;line-height:1.65;"><strong>HEAD</strong> est le pointeur de position dans l'historique Git. En temps normal il pointe sur une <em>branche</em>, qui elle-même pointe sur un commit — tout nouveau commit avance la branche automatiquement. En état <strong>« detached HEAD »</strong>, HEAD pointe directement sur un commit, sans branche intermédiaire. Git affiche un avertissement et vous permet d'inspecter ou tester cet état, mais tout commit créé ici sera <strong>orphelin</strong> : il n'appartient à aucune branche et disparaîtra au prochain <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">git checkout</code> si vous ne créez pas de branche pour l'ancrer.</p>
+      <div class="two-col" style="align-items:start;">
+
+        <div>
+          <div style="font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">État normal</div>
+          <div class="hier" style="font-size:.8rem;line-height:1.9;"><span class="h-o">HEAD</span> <span class="h-m">──►</span> <span class="h-b">main</span> <span class="h-m">──►</span> <span class="h-m">commit abc123</span>
+<span class="h-l">HEAD pointe sur la branche, qui pointe sur un commit</span>
+<span class="h-l">Tout commit créé avance la branche automatiquement</span></div>
+          <div style="margin-top:10px;">
+          <div style="font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Detached HEAD</div>
+          <div class="hier" style="font-size:.8rem;line-height:1.9;"><span class="h-o">HEAD</span> <span class="h-m">──►</span> <span class="h-m">commit abc123</span> <span class="h-l">(pas de branche !)</span>
+<span class="h-l">HEAD pointe directement sur un commit</span>
+<span class="h-l">Tout nouveau commit sera "orphelin" et perdu au prochain checkout</span></div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Quand ça arrive</div>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:5px;font-size:.8rem;color:var(--muted);">
+            <li style="display:flex;gap:8px;"><code style="background:var(--code-bg);color:var(--code-txt);padding:1px 5px;border-radius:3px;flex-shrink:0;">git checkout &lt;sha&gt;</code><span>Naviguer vers un commit précis</span></li>
+            <li style="display:flex;gap:8px;"><code style="background:var(--code-bg);color:var(--code-txt);padding:1px 5px;border-radius:3px;flex-shrink:0;">git checkout v1.0.0</code><span>Naviguer vers un tag</span></li>
+            <li style="display:flex;gap:8px;"><code style="background:var(--code-bg);color:var(--code-txt);padding:1px 5px;border-radius:3px;flex-shrink:0;">git checkout HEAD~3</code><span>Remonter dans l'historique</span></li>
+          </ul>
+          <div style="margin-top:10px;">
+          <div style="font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Sortir du detached HEAD</div>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:5px;font-size:.8rem;color:var(--muted);">
+            <li style="display:flex;gap:8px;"><code style="background:var(--code-bg);color:var(--code-txt);padding:1px 5px;border-radius:3px;flex-shrink:0;">git checkout main</code><span>Retourner sur une branche normale</span></li>
+            <li style="display:flex;gap:8px;"><code style="background:var(--code-bg);color:var(--code-txt);padding:1px 5px;border-radius:3px;flex-shrink:0;">git checkout -b &lt;nom&gt;</code><span>Créer une branche depuis cet état — garde les commits créés</span></li>
+          </ul>
+          </div>
+          <div style="margin-top:8px;padding:7px 10px;background:var(--yellow-m);border-radius:5px;font-size:.77rem;color:var(--muted);">
+            <strong style="color:var(--yellow);">En entretien :</strong> un detached HEAD n'est pas une erreur — c'est utile pour inspecter l'historique. Le danger est d'y commiter sans créer de branche : ces commits disparaissent au prochain <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">checkout</code>.
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 05 PLATEFORMES ────────────────────────────────── -->
+  <section id="plateformes">
+    <div class="sec-head">
+      <div class="sec-eye">06 — Comparaison</div>
+      <h2 class="sec-title">GitHub · GitLab · Azure DevOps</h2>
+    </div>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">Les trois plateformes hébergent des dépôts Git et y ajoutent des outils collaboratifs : revue de code, CI/CD intégrée, gestion de projet. Les <strong>concepts sont identiques</strong> — ce qui diffère, c'est la terminologie, les chemins d'interface et l'écosystème autour (GitHub Actions vs GitLab CI vs Azure Pipelines). En entretien : utilisez le nom de la plateforme de l'entreprise.</p>
+    <div class="t-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fonctionnalité</th>
+            <th><div class="plt c-gh"><span class="plt-dot d-gh"></span>GitHub</div></th>
+            <th><div class="plt c-gl"><span class="plt-dot d-gl"></span>GitLab</div></th>
+            <th><div class="plt c-az"><span class="plt-dot d-az"></span>Azure DevOps</div></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Terme PR/MR</strong></td><td>Pull Request</td><td>Merge Request</td><td>Pull Request</td></tr>
+          <tr><td><strong>Fichier CI/CD</strong></td><td><code>.github/workflows/*.yml</code></td><td><code>.gitlab-ci.yml</code></td><td><code>azure-pipelines.yml</code></td></tr>
+          <tr><td><strong>Moteur CI/CD</strong></td><td>GitHub Actions</td><td>GitLab CI/CD (intégré)</td><td>Azure Pipelines</td></tr>
+          <tr><td><strong>Branch protection</strong></td><td>Settings → Branches → Rules</td><td>Settings → Repository → Protected branches</td><td>Project Settings → Repos → Policies</td></tr>
+          <tr><td><strong>Secrets CI</strong></td><td>Settings → Secrets → Actions</td><td>Settings → CI/CD → Variables</td><td>Pipelines → Library → Variable groups</td></tr>
+          <tr><td><strong>Issues / Tickets</strong></td><td>Issues + Projects (kanban)</td><td>Issues + Epics + Milestones</td><td>Work Items + Azure Boards</td></tr>
+          <tr><td><strong>Wiki</strong></td><td>Wiki (repo git séparé, désactivé par défaut)</td><td>Wiki (repo git séparé, désactivé par défaut)</td><td>Azure Wiki (disponible d'office)</td></tr>
+          <tr><td><strong>Registry images</strong></td><td>GitHub Container Registry / Packages</td><td>GitLab Container Registry (intégré)</td><td>Azure Container Registry (service séparé)</td></tr>
+          <tr><td><strong>Stratégies de merge</strong></td><td>Merge commit, Squash, Rebase</td><td>Merge commit, Squash, Fast-forward</td><td>Merge commit, Squash, Rebase, Semi-linear</td></tr>
+          <tr><td><strong>Revue de code</strong></td><td>PR Reviews + CODEOWNERS</td><td>MR Approvals + Approval rules</td><td>PR Policies + Required reviewers</td></tr>
+          <tr><td><strong>Runners / Agents</strong></td><td>GitHub-hosted + self-hosted runners</td><td>GitLab-hosted + self-hosted runners</td><td>Microsoft-hosted + self-hosted agents</td></tr>
+          <tr><td><strong>Déclencheur sur PR/MR</strong></td><td><code>on: pull_request:</code></td><td><code>if: $CI_PIPELINE_SOURCE == "merge_request_event"</code></td><td><code>pr: branches: include: [main]</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── 07 COMPARAISONS ──────────────────────────────────── -->
+  <section id="comparaisons">
+    <div class="sec-head">
+      <div class="sec-eye">07 — Concepts clés</div>
+      <h2 class="sec-title">Comparaisons à maîtriser</h2>
+    </div>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">Ces quatre paires de concepts sont parmi les questions d'entretien les plus fréquentes sur Git. Il ne suffit pas de connaître la définition : il faut savoir <strong>quand utiliser l'un plutôt que l'autre</strong> et être capable de l'expliquer avec un schéma ou un exemple concret.</p>
+
+    <!-- Merge vs Rebase -->
+    <div style="margin-bottom:14px;">
+      <h3 style="font-size:.9rem;font-weight:600;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;">Merge vs Rebase</h3>
+      <div class="two-col">
+        <div class="card" style="border-top:2px solid var(--yellow);">
+          <div class="card-head" style="color:var(--yellow);">git merge</div>
+          <div class="hier" style="line-height:1.7;margin-bottom:10px;"><span class="h-m">A──B──C──────M  main</span>
+<span class="h-m">      \       /</span>
+<span class="h-b">       D──E──'   feat</span>
+<span class="h-l">M = merge commit (commit de fusion)</span></div>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:5px;font-size:.81rem;">
+            <li style="display:flex;gap:8px;"><span style="color:var(--yellow);font-weight:600;flex-shrink:0;">+</span><span style="color:var(--muted);">Non-destructif — l'historique exact est préservé</span></li>
+            <li style="display:flex;gap:8px;"><span style="color:var(--yellow);font-weight:600;flex-shrink:0;">+</span><span style="color:var(--muted);">Idéal pour intégrer une branche via <strong>PR/MR</strong></span></li>
+            <li style="display:flex;gap:8px;"><span style="color:var(--red);font-weight:600;flex-shrink:0;">–</span><span style="color:var(--muted);">Crée un commit de merge qui charge l'historique</span></li>
+            <li style="display:flex;gap:8px;"><span style="color:var(--red);font-weight:600;flex-shrink:0;">–</span><span style="color:var(--muted);">Historique non-linéaire, difficile à lire sur de gros projets</span></li>
+          </ul>
+          <div style="margin-top:10px;padding:8px 10px;background:var(--yellow-m);border-radius:5px;font-size:.78rem;color:var(--muted);">
+            <strong style="color:var(--yellow);">Quand l'utiliser&nbsp;:</strong> pour intégrer <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">feat → dev → main</code> via PR/MR
+          </div>
+        </div>
+        <div class="card" style="border-top:2px solid var(--orange);">
+          <div class="card-head" style="color:var(--orange);">git rebase</div>
+          <div class="hier" style="line-height:1.7;margin-bottom:10px;"><span class="h-m">A──B──C──────D'──E'  feat</span>
+<span class="h-m">      \</span>
+<span class="h-o">       D──E  </span><span class="h-l">← commits originaux rejoués</span>
+<span class="h-l">D' et E' ont de nouveaux SHA</span></div>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:5px;font-size:.81rem;">
+            <li style="display:flex;gap:8px;"><span style="color:var(--yellow);font-weight:600;flex-shrink:0;">+</span><span style="color:var(--muted);">Historique linéaire et propre — plus lisible</span></li>
+            <li style="display:flex;gap:8px;"><span style="color:var(--yellow);font-weight:600;flex-shrink:0;">+</span><span style="color:var(--muted);">Pas de commit de merge parasite</span></li>
+            <li style="display:flex;gap:8px;"><span style="color:var(--red);font-weight:600;flex-shrink:0;">–</span><span style="color:var(--muted);"><strong>Réécrit l'historique</strong> — SHA des commits changent</span></li>
+            <li style="display:flex;gap:8px;"><span style="color:var(--red);font-weight:600;flex-shrink:0;">⚠</span><span style="color:var(--muted);"><strong>Jamais sur une branche partagée</strong> avec d'autres devs</span></li>
+          </ul>
+          <div style="margin-top:10px;padding:8px 10px;background:var(--orange-m);border-radius:5px;font-size:.78rem;color:var(--muted);">
+            <strong style="color:var(--orange);">Quand l'utiliser&nbsp;:</strong> pour mettre à jour sa branche locale&nbsp;: <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">git fetch origin && git rebase origin/main</code>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clone vs Fork + PR vs MR -->
+    <div class="two-col">
+
+      <div>
+        <h3 style="font-size:.9rem;font-weight:600;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;">Clone vs Fork</h3>
+        <div class="t-wrap">
+          <table>
+            <thead><tr><th></th><th>git clone</th><th>Fork</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Où ça se passe</strong></td><td>En local</td><td>Côté serveur (GitHub/GitLab)</td></tr>
+              <tr><td><strong>Résultat</strong></td><td>Copie locale du dépôt d'origine</td><td>Copie du dépôt dans son propre espace</td></tr>
+              <tr><td><strong>Lien avec l'original</strong></td><td>Remote <code>origin</code> pointe sur la source</td><td>Dépôt distinct, lien via <code>upstream</code></td></tr>
+              <tr><td><strong>Droits nécessaires</strong></td><td>Accès en lecture au dépôt</td><td>Accès en lecture (fork public)</td></tr>
+              <tr><td><strong>Pour contribuer</strong></td><td>Si on a accès en écriture</td><td>Si on n'a pas accès en écriture (open source)</td></tr>
+              <tr><td><strong>Workflow type</strong></td><td>Équipe interne sur le même repo</td><td>Contribution à un projet open source</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:8px;padding:8px 12px;background:var(--surf-alt);border-radius:6px;font-size:.78rem;color:var(--muted);border:1px solid var(--border);">
+          Après un fork&nbsp;: <code style="background:var(--code-bg);color:var(--code-txt);padding:0 4px;border-radius:3px;">git clone &lt;mon-fork&gt;</code> puis <code style="background:var(--code-bg);color:var(--code-txt);padding:0 4px;border-radius:3px;">git remote add upstream &lt;original&gt;</code> pour rester synchronisé.
+        </div>
+      </div>
+
+      <div>
+        <h3 style="font-size:.9rem;font-weight:600;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;">Pull Request vs Merge Request</h3>
+        <div class="t-wrap">
+          <table>
+            <thead><tr><th></th><th class="c-gh">Pull Request (PR)</th><th class="c-gl">Merge Request (MR)</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Plateforme</strong></td><td>GitHub, Azure DevOps</td><td>GitLab</td></tr>
+              <tr><td><strong>Concept</strong></td><td colspan="2" style="color:var(--muted);font-style:italic;">Identique — demande de révision et d'intégration d'une branche dans une autre</td></tr>
+              <tr><td><strong>Squash au merge</strong></td><td>Option disponible dans l'UI</td><td>Option disponible dans l'UI</td></tr>
+              <tr><td><strong>Reviewer requis</strong></td><td>Branch protection rules</td><td>Approval rules</td></tr>
+              <tr><td><strong>CI obligatoire</strong></td><td>Status checks required</td><td>Pipelines must succeed</td></tr>
+              <tr><td><strong>Lier une issue</strong></td><td><code>Closes #42</code> dans le corps</td><td><code>Closes #42</code> dans le corps</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:8px;padding:8px 12px;background:var(--surf-alt);border-radius:6px;font-size:.78rem;color:var(--muted);border:1px solid var(--border);">
+          PR et MR désignent la <strong>même chose</strong>. En entretien, utiliser le terme de la plateforme de l'entreprise.
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── 08 RESET, AMEND & REFLOG ──────────────────────── -->
+  <section id="corriger">
+    <div class="sec-head">
+      <div class="sec-eye">08 — Annuler &amp; corriger</div>
+      <h2 class="sec-title">Modifier un commit · Reset · Reflog</h2>
+    </div>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">Git offre plusieurs niveaux d'annulation selon que le commit est <strong>local ou déjà partagé</strong>. Règle d'or : <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">--amend</code>, <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">rebase -i</code> et <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">reset</code> réécrivent l'historique — réservés au travail <em>avant</em> le push. Pour annuler quelque chose de déjà poussé, la seule option sûre est <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">git revert</code>, qui crée un nouveau commit d'annulation sans toucher à l'existant.</p>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Modifier un commit -->
+      <div class="card" style="border-top:2px solid var(--yellow);">
+        <div class="card-head" style="color:var(--yellow);">Modifier un commit</div>
+        <div class="t-wrap" style="border:none;border-radius:0;">
+          <table style="font-size:.8rem;">
+            <thead><tr><th>Objectif</th><th>Commande</th></tr></thead>
+            <tbody>
+              <tr><td>Corriger le message du dernier commit</td><td><code>git commit --amend -m "nouveau msg"</code></td></tr>
+              <tr><td>Ajouter un fichier oublié (sans changer le msg)</td><td><code>git add &lt;f&gt; && git commit --amend --no-edit</code></td></tr>
+              <tr><td>Fusionner des commits WIP avant push</td><td><code>git rebase -i HEAD~N</code> → <code>fixup</code></td></tr>
+              <tr><td>Réécrire un message plus ancien</td><td><code>git rebase -i HEAD~N</code> → <code>reword</code></td></tr>
+              <tr><td>Réordonner des commits</td><td><code>git rebase -i HEAD~N</code> → changer l'ordre des lignes</td></tr>
+              <tr><td>Supprimer un commit</td><td><code>git rebase -i HEAD~N</code> → <code>drop</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:8px;padding:7px 10px;background:var(--red-m);border-radius:5px;font-size:.77rem;color:var(--red);">
+          <strong>⚠ Règle absolue&nbsp;:</strong> <code style="background:transparent;color:var(--red);padding:0;">--amend</code> et <code style="background:transparent;color:var(--red);padding:0;">rebase -i</code> réécrivent l'historique — ne jamais les utiliser sur des commits déjà pushés sur une branche partagée.
+        </div>
+      </div>
+
+      <!-- git reset + reflog côte à côte -->
+      <div class="two-col">
+
+      <div class="card" style="border-top:2px solid var(--orange);">
+        <div class="card-head" style="color:var(--orange);">git reset — les 3 modes</div>
+        <div class="t-wrap" style="border:none;border-radius:0;">
+          <table style="font-size:.8rem;">
+            <thead><tr><th>Mode</th><th>Working Dir</th><th>Staging</th><th>Commits</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code>--soft</code></td>
+                <td style="color:var(--yellow);font-weight:600;">intact</td>
+                <td style="color:var(--yellow);font-weight:600;">intact</td>
+                <td style="color:var(--red);font-weight:600;">annulés</td>
+              </tr>
+              <tr>
+                <td><code>--mixed</code> <span style="font-size:.7rem;color:var(--muted);">(défaut)</span></td>
+                <td style="color:var(--yellow);font-weight:600;">intact</td>
+                <td style="color:var(--red);font-weight:600;">vidé</td>
+                <td style="color:var(--red);font-weight:600;">annulés</td>
+              </tr>
+              <tr>
+                <td><code>--hard</code></td>
+                <td style="color:var(--red);font-weight:600;">effacé ⚠</td>
+                <td style="color:var(--red);font-weight:600;">effacé ⚠</td>
+                <td style="color:var(--red);font-weight:600;">annulés</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:5px;margin-top:10px;font-size:.8rem;">
+          <li style="display:flex;gap:8px;align-items:flex-start;"><code style="background:var(--code-bg);color:var(--code-txt);padding:1px 5px;border-radius:3px;flex-shrink:0;">--soft HEAD~1</code><span style="color:var(--muted);">Défaire un commit, modifs restent stagées — pour le resplitter ou corriger</span></li>
+          <li style="display:flex;gap:8px;align-items:flex-start;"><code style="background:var(--code-bg);color:var(--code-txt);padding:1px 5px;border-radius:3px;flex-shrink:0;">--mixed HEAD~1</code><span style="color:var(--muted);">Défaire commit et staging, modifs restent dans le working dir</span></li>
+          <li style="display:flex;gap:8px;align-items:flex-start;"><code style="background:var(--code-bg);color:var(--code-txt);padding:1px 5px;border-radius:3px;flex-shrink:0;">--hard HEAD</code><span style="color:var(--muted);">Annuler toutes les modifs non-commitées — irréversible sans reflog</span></li>
+        </ul>
+        <div style="margin-top:8px;padding:7px 10px;background:var(--orange-m);border-radius:5px;font-size:.77rem;color:var(--muted);">
+          <strong style="color:var(--orange);">reset vs revert&nbsp;:</strong> <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">reset</code> réécrit l'historique (local uniquement). <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">git revert &lt;sha&gt;</code> crée un nouveau commit d'annulation — <strong>la seule option sûre après un push.</strong>
+        </div>
+      </div>
+
+      <div class="card" style="border-top:2px solid var(--red);">
+        <div class="card-head" style="color:var(--red);">git reflog — le filet de sécurité</div>
+        <p style="font-size:.82rem;color:var(--muted);margin-bottom:10px;line-height:1.6;">Le reflog enregistre <strong>tous les mouvements de HEAD</strong> localement — y compris après un <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">reset --hard</code> ou une branche supprimée par erreur. Conservé <strong>90 jours</strong>. N'est pas pushé vers le remote.</p>
+        <div class="hier" style="line-height:1.7;">git reflog
+<span class="h-o">abc1234</span> <span class="h-m">HEAD@{0}: reset: moving to HEAD~1</span>
+<span class="h-b">def5678</span> <span class="h-m">HEAD@{1}: commit: feat(auth): token</span>
+<span class="h-b">ghi9012</span> <span class="h-m">HEAD@{2}: commit: fix: null check</span></div>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:5px;">
+          <div style="font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Récupérer un état perdu</div>
+          <div style="background:var(--surf-alt);border-radius:5px;padding:8px 10px;font-size:.79rem;color:var(--muted);">
+            <strong style="color:var(--text);">Après un reset --hard par erreur&nbsp;:</strong><br>
+            <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">git reflog</code> → trouver le SHA → <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">git reset --hard &lt;sha&gt;</code>
+          </div>
+          <div style="background:var(--surf-alt);border-radius:5px;padding:8px 10px;font-size:.79rem;color:var(--muted);">
+            <strong style="color:var(--text);">Branche supprimée par erreur&nbsp;:</strong><br>
+            <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">git reflog</code> → SHA du dernier commit → <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">git checkout -b ma-branche &lt;sha&gt;</code>
+          </div>
+          <div style="background:var(--surf-alt);border-radius:5px;padding:8px 10px;font-size:.79rem;color:var(--muted);">
+            <strong style="color:var(--text);">Cherry-pick d'un commit perdu&nbsp;:</strong><br>
+            <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">git reflog</code> → SHA → <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">git cherry-pick &lt;sha&gt;</code>
+          </div>
+        </div>
+      </div>
+
+      </div><!-- /two-col reset+reflog -->
+    </div>
+  </section>
+
+  <!-- ── 09 BONNES PRATIQUES ───────────────────────────── -->
+  <section id="pratiques">
+    <div class="sec-head">
+      <div class="sec-eye">09 — Travail en équipe</div>
+      <h2 class="sec-title">Bonnes pratiques</h2>
+    </div>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">Les réflexes qui évitent les accidents en équipe. Les scénarios varient selon la taille de l'équipe et l'organisation des branches, mais les principes restent constants : <strong>ne jamais travailler directement sur les branches partagées</strong>, synchroniser souvent, et protéger <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">main</code> et <code style="background:var(--code-bg);color:var(--code-txt);padding:0 3px;border-radius:3px;">dev</code> avec des politiques côté serveur.</p>
+    <div class="bp-box">
+      <div class="bp-grid">
+
+        <div class="bp-block">
+          <div class="tag tag-o">2 devs · même branche</div>
+          <h4>Stash → Pull → Stash Pop</h4>
+          <ul class="steps">
+            <li><span class="sn">1</span><span>Mettre de côté ses modifs : <code>git stash</code></span></li>
+            <li><span class="sn">2</span><span>Récupérer les modifs du collègue : <code>git pull origin &lt;branche&gt;</code></span></li>
+            <li><span class="sn">3</span><span>Réappliquer ses modifs : <code>git stash pop</code></span></li>
+            <li><span class="sn sn-warn">!</span><span>Conflit après pop → résoudre → <code>git add</code> → <code>git stash drop</code></span></li>
+          </ul>
+        </div>
+
+        <div class="bp-block">
+          <div class="tag tag-y">10+ devs · grande équipe</div>
+          <h4>Fetch → Rebase (pas pull)</h4>
+          <ul class="steps">
+            <li><span class="sn">1</span><span>Télécharger sans toucher au local : <code>git fetch origin</code></span></li>
+            <li><span class="sn">2</span><span>Rejouer ses commits dessus : <code>git rebase origin/main</code></span></li>
+            <li><span class="sn">3</span><span>Pousser après rebase : <code>git push --force-with-lease</code></span></li>
+            <li><span class="sn sn-warn">!</span><span><code>git pull</code> = fetch + merge → commits de merge inutiles dans l'historique</span></li>
+          </ul>
+        </div>
+
+        <div class="bp-block">
+          <div class="tag tag-r">Protections de branches</div>
+          <h4>Règles à activer sur main &amp; dev</h4>
+          <ul class="rules">
+            <li><span>Interdire les push directs — tout passe par <strong>PR/MR</strong></span></li>
+            <li><span>Exiger <strong>au moins 1 reviewer</strong> par PR</span></li>
+            <li><span>Exiger que <strong>la CI soit verte</strong> avant le merge</span></li>
+            <li><span>Interdire le <code>force push</code> sur main</span></li>
+            <li><span>Réinitialiser les approbations si nouveaux commits</span></li>
+          </ul>
+        </div>
+
+        <div class="bp-block">
+          <div class="tag tag-o">Règles d'or</div>
+          <h4>À respecter en toutes circonstances</h4>
+          <ul class="rules">
+            <li><span><strong>Jamais de commit direct</strong> sur main ou dev</span></li>
+            <li><span><strong>Rebase</strong> pour mettre à jour sa branche locale, <strong>merge</strong> via PR pour intégrer</span></li>
+            <li><span><strong>Jamais de rebase</strong> sur une branche partagée avec d'autres</span></li>
+            <li><span><code>--force-with-lease</code> au lieu de <code>--force</code> — vérifie qu'on n'écrase pas le travail d'un collègue</span></li>
+            <li><span>Branches courtes : <strong>3–5 jours max</strong>, sinon découper en sous-tâches</span></li>
+            <li><span><code>git revert</code> (pas <code>reset</code>) pour annuler un commit déjà pushé</span></li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+</main>

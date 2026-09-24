@@ -1,0 +1,48 @@
+# =====================================================================
+# <APP> Function App — ONE pipeline for ALL environments.
+# Point Azure DevOps at this file (Pipelines > Edit > Settings > YAML path).
+#
+# One pipeline, N environments. Everything is shared EXCEPT the target
+# service, selected by branch below (pipelines/config/<env>.yaml).
+# Flow (always): precommit (merge gate) -> deploy to the env service -> wiki.
+#
+# Add an environment  = add its branch here + a pipelines/config/<env>.yaml
+#                       holding ONLY that env's service (subscription/app/rg).
+# Match the branch names below to your repo's real branches.
+# =====================================================================
+
+trigger:
+  branches:
+    include:
+      - dev
+      - uat
+      - main # prod
+
+pool:
+  name: <SELF_HOSTED_AGENT_POOL> # or: vmImage: "ubuntu-latest"
+
+variables:
+  # --- Per-environment SERVICE target (the ONLY thing that differs) ---
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/dev') }}:
+      - template: pipelines/config/dev.yaml
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/uat') }}:
+      - template: pipelines/config/uat.yaml
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+      - template: pipelines/config/prod.yaml
+
+  # --- Shared non-secret config (identical for EVERY environment) ---
+  - name: pythonVersion
+    value: "3.12"
+  - name: ORGA
+    value: "<AZURE_DEVOPS_ORG>"
+  - name: PROJECT
+    value: "<AZURE_DEVOPS_PROJECT>"
+  - name: REPO
+    value: "<REPO_NAME>"
+  - name: GIT_USER_EMAIL
+    value: "ci-bot@adeccogroup.com"
+  - name: GIT_USER_NAME
+    value: "CI Bot"
+
+stages:
+  - template: pipelines/azure-pipeline.yaml

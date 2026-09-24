@@ -1,0 +1,105 @@
+# =====================================================================
+# Wiki stage : sync docs/ -> Azure DevOps wiki
+# ---------------------------------------------------------------------
+# Runs on every pipeline execution but PUSHES to the wiki only when docs/
+# content actually differs from the published wiki. Detection is by CONTENT
+# comparison (rsync + `git status`), not a fragile commit diff. This natively
+# covers: first deploy (empty/missing wiki -> everything is "new"),
+# multi-commit pushes (compares final state), and no-change runs (no-op).
+#
+# Required pipeline variables:
+#   WIKI_TOKEN (SECRET PAT — scopes: Code R&W + Wiki R&W)
+#   ORGA, PROJECT, REPO, GIT_USER_EMAIL, GIT_USER_NAME  (non-secret; from config YAML)
+# =====================================================================
+
+stages:
+  - stage: wiki
+    displayName: Deploy Wiki
+    dependsOn: precommit
+    # Like the deploy stage: sync the wiki only on a real push (merge), not
+    # in a PR build validation.
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+      - job: sync_wiki
+        displayName: Provision & sync wiki
+        steps:
+          - checkout: self
+          - bash: |
+              set -uo pipefail
+
+              # 0) Validate required variables (avoids an opaque curl error)
+              missing=""
+              [ -z "${WIKI_TOKEN:-}" ] && missing="$missing WIKI_TOKEN"
+              [ -z "${ORGA:-}" ]       && missing="$missing ORGA"
+              [ -z "${PROJECT:-}" ]    && missing="$missing PROJECT"
+              [ -z "${REPO:-}" ]       && missing="$missing REPO"
+              if [ -n "$missing" ]; then
+                echo "##[error]Missing/empty pipeline variable(s):$missing"
+                echo "Define them in Pipeline > Variables (WIKI_TOKEN as secret)."
+                exit 1
+              fi
+              echo "Context: ORGA=$ORGA | PROJECT=$PROJECT | REPO=$REPO | token=${#WIKI_TOKEN} chars"
+
+              ORG_URL="https://dev.azure.com/${ORGA}"
+              PROJECT_ENC="${PROJECT// /%20}"
+              API="api-version=7.1"
+
+              # 1) List wikis (capture HTTP code for diagnostics)
+              HTTP=$(curl -s -o /tmp/wikis.json -w "%{http_code}" -u ":${WIKI_TOKEN}" "${ORG_URL}/${PROJECT_ENC}/_apis/wiki/wikis?${API}")
+              echo "GET _apis/wiki/wikis -> HTTP $HTTP"
+              if [ "$HTTP" != "200" ]; then
+                echo "##[error]Wiki API call failed (HTTP $HTTP)."
+                echo "  - 401/403 : PAT missing scope Wiki (Read & Write) [+ Code (Read & Write)], or expired;"
+                echo "  - 404     : wrong ORGA or PROJECT (check spelling/case);"
+                echo "  - 203/302 : invalid token (Azure DevOps returned a login page)."
+                head -c 500 /tmp/wikis.json; echo
+                exit 1
+              fi
+
+              WIKI_NAME=$(python3 -c "import json; v=json.load(open('/tmp/wikis.json')).get('value',[]); w=[x for x in v if x.get('type')=='projectWiki']; print(w[0]['name'] if w else '')")
+
+              # 2) Otherwise create it via REST
+              if [ -z "$WIKI_NAME" ]; then
+                echo "No project wiki found -> creating."
+                PID=$(curl -sf -u ":${WIKI_TOKEN}" "${ORG_URL}/_apis/projects/${PROJECT_ENC}?${API}" | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
+                WIKI_NAME="${REPO}.wiki"
+                HTTP=$(curl -s -o /tmp/create.json -w "%{http_code}" -u ":${WIKI_TOKEN}" -X POST \
+                  -H "Content-Type: application/json" \
+                  -d "{\"type\":\"projectWiki\",\"name\":\"${WIKI_NAME}\",\"projectId\":\"${PID}\"}" \
+                  "${ORG_URL}/${PROJECT_ENC}/_apis/wiki/wikis?${API}")
+                echo "POST create wiki -> HTTP $HTTP"
+                if [ "$HTTP" != "200" ] && [ "$HTTP" != "201" ]; then
+                  echo "##[error]Wiki creation failed (HTTP $HTTP). Create it once manually (Overview > Wiki) then re-run."
+                  head -c 500 /tmp/create.json; echo
+                  exit 1
+                fi
+              fi
+              echo "Target wiki: $WIKI_NAME"
+
+              # 3) Clone the wiki repo + sync docs/
+              WIKI_NAME_ENC="${WIKI_NAME// /%20}"
+              git config --global user.email "${GIT_USER_EMAIL:-ci@adecco.fr}"
+              git config --global user.name "${GIT_USER_NAME:-Azure DevOps CI}"
+              if ! git clone "https://${WIKI_TOKEN}@dev.azure.com/${ORGA}/${PROJECT_ENC}/_git/${WIKI_NAME_ENC}" wiki; then
+                echo "##[error]git clone of the wiki failed. Check the PAT has scope Code (Read & Write)."
+                exit 1
+              fi
+
+              rsync -av --delete --exclude='.git/' docs/ wiki/
+              cd wiki
+              if [ -n "$(git status --porcelain)" ]; then
+                git add .
+                git commit -m "docs: update wiki from docs (CI)"
+                git push origin
+                echo "Wiki updated."
+              else
+                echo "No change to push to the wiki."
+              fi
+            displayName: Provision & sync wiki
+            env:
+              WIKI_TOKEN: $(WIKI_TOKEN)        # SECRET pipeline variable (PAT)
+              ORGA: $(ORGA)
+              PROJECT: $(PROJECT)
+              REPO: $(REPO)
+              GIT_USER_EMAIL: $(GIT_USER_EMAIL)
+              GIT_USER_NAME: $(GIT_USER_NAME)

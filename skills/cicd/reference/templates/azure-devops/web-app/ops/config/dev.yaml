@@ -1,0 +1,11 @@
+# NON-SECRET service target for DEV. Only the service differs per env.
+# Never put a secret here.
+variables:
+  - name: azureSubscription
+    value: "<AZU-EUR-FR-DEV-APPSPN>"
+  - name: appName
+    value: "<WAS-EUR-FR-DEV-WEB-APP>"
+  - name: rgName
+    value: "<RG-EUR-FR-DEV-APP>"
+  - name: environment
+    value: dev

@@ -1,0 +1,34 @@
+# Docs -> GitLab project wiki sync (idempotent). Included by .gitlab-ci.yml.
+# Pushes docs/ to the separate <project>.wiki.git repo, only when content actually differs.
+# Requires CI/CD variable CI_WIKI_TOKEN = Project Access Token (Developer, write_repository), masked.
+# Page/navigation conventions (_sidebar.md, slug links) are owned by the docs-readme-wiki skill.
+
+docs_wiki:
+  stage: docs
+  image: alpine:latest
+  variables:
+    GIT_USER_EMAIL: gitlab-wiki-ci-bot@example.com
+    GIT_USER_NAME: Wiki Bot
+  before_script:
+    - apk add --no-cache git rsync
+    - git config --global user.email "$GIT_USER_EMAIL"
+    - git config --global user.name "$GIT_USER_NAME"
+  script:
+    - '[ -n "$CI_WIKI_TOKEN" ] || { echo "CI_WIKI_TOKEN is not set"; exit 1; }'
+    - |
+      WIKI_URL="https://gitlab-ci-token:${CI_WIKI_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.wiki.git"
+      git clone "$WIKI_URL" wiki
+      rsync -av --delete --exclude=".git/" "docs/" "wiki/"
+      cd wiki
+      if [ -n "$(git status --porcelain)" ]; then
+        git add .
+        git commit -m "docs: update wiki from docs (CI)"
+        git push origin "$(git rev-parse --abbrev-ref HEAD)"
+        echo "Wiki updated."
+      else
+        echo "No wiki changes."
+      fi
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: on_success
+    - when: never

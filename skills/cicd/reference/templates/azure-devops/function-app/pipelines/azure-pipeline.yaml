@@ -1,0 +1,157 @@
+# =====================================================================
+# Python Function App pipeline (Linux) — deps built in-pipeline
+#
+# Deps are installed in the pipeline and embedded in the zip (the app runs
+# in a private VNet with no PyPI access -> no remote build).
+# Python-version mismatch is prevented by:
+#   - wheels forced for the runtime version/platform
+#   - aligning the app's linuxFxVersion before deploy
+#
+# Stages: precommit -> deploy (Function App) -> wiki (docs/ -> Azure DevOps wiki)
+# =====================================================================
+
+stages:
+  # -------------------------------------------------------------------
+  # 1) Pre-commit
+  # -------------------------------------------------------------------
+  - stage: precommit
+    displayName: Pre-commit checks
+    jobs:
+      - job: run_pre_commit
+        displayName: Run pre-commit
+        steps:
+          - checkout: self
+          - script: |
+              set -e
+              curl -Ls https://astral.sh/uv/install.sh | sh
+              export PATH="$HOME/.local/bin:$PATH"
+              uv sync --all-extras
+              uv run pre-commit run --all-files
+            displayName: Install deps & run pre-commit
+
+  # -------------------------------------------------------------------
+  # 2) Deploy : embedded deps + zipDeploy
+  # -------------------------------------------------------------------
+  - stage: deploy
+    displayName: Deploy Function App
+    dependsOn: precommit
+    # Deploy only on a real push to the branch (merge completed), never in a
+    # PR build. Under a branch-policy build validation, only `precommit` runs
+    # as the merge gate — no deployment of non-merged code.
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+      - job: deploy_function
+        displayName: Build & deploy
+        steps:
+          - checkout: self
+
+          - script: |
+              set -e
+              curl -Ls https://astral.sh/uv/install.sh | sh
+              export PATH="$HOME/.local/bin:$PATH"
+              uv python install "$PYTHON_VERSION"
+
+              # prod requirements.txt (no dev, no project itself)
+              uv export --no-hashes --no-dev --no-emit-project -o requirements.txt
+
+              # Package: host.json + function_app.py + requirements.txt + flattened src/
+              APP="$BUILD_ARTIFACTSTAGINGDIRECTORY/app"
+              mkdir -p "$APP"
+              cp host.json function_app.py requirements.txt "$APP/"
+              rsync -a \
+                --exclude='/__init__.py' \
+                --exclude='__pycache__' \
+                --exclude='*.pyc' \
+                src/ "$APP/"
+
+              # Deps embedded for the runtime's Python version + platform
+              # (manylinux_2_28 = Debian bookworm of the Functions runtime).
+              uv pip install \
+                --python "$PYTHON_VERSION" \
+                --python-platform x86_64-manylinux_2_28 \
+                --target "$APP/.python_packages/lib/site-packages" \
+                -r requirements.txt
+
+              # Smoke test: the package must import with the target version
+              UV_PY="$(uv python find "$PYTHON_VERSION")"
+              PYTHONPATH="$APP/.python_packages/lib/site-packages" "$UV_PY" -c \
+                "import pydantic_core, pydantic; print('Smoke test OK - pydantic', pydantic.VERSION)"
+            displayName: Build deployment package (deps included)
+            env:
+              PYTHON_VERSION: $(pythonVersion)
+
+          - task: ArchiveFiles@2
+            displayName: Archive package
+            inputs:
+              rootFolderOrFile: "$(Build.ArtifactStagingDirectory)/app"
+              includeRootFolder: false
+              archiveType: "zip"
+              archiveFile: "$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip"
+              replaceExistingArchive: true
+
+          # Size guardrail: beyond ~1 GB, run-from-package extraction/mount is
+          # unstable -> host errors, 0 functions visible.
+          - bash: |
+              set -e
+              ZIP="$BUILD_ARTIFACTSTAGINGDIRECTORY/$BUILD_BUILDID.zip"
+              SIZE_MB=$(( $(stat -c%s "$ZIP") / 1024 / 1024 ))
+              echo "Package size: ${SIZE_MB} MB"
+              if [ "$SIZE_MB" -gt 900 ]; then
+                echo "##vso[task.logissue type=error]Package ${SIZE_MB} MB > 900 MB: exceeds run-from-package limit (1 GB). Trim deps (torch CPU, dev deps...)."
+                exit 1
+              fi
+            displayName: Check package size (< 1 GB)
+
+          # Guarantees the app runtime == the version used at build time
+          # (root cause of the original pydantic_core ModuleNotFoundError).
+          - task: AzureCLI@2
+            displayName: Align runtime to PYTHON|$(pythonVersion)
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -e
+                az functionapp config set \
+                  -g "$RG_NAME" -n "$APP_NAME" \
+                  --linux-fx-version "PYTHON|$PYTHON_VERSION" -o none
+            env:
+              PYTHON_VERSION: $(pythonVersion)
+              APP_NAME: $(appName)
+              RG_NAME: $(rgName)
+
+          - task: AzureFunctionApp@2
+            displayName: Deploy to Azure Functions
+            inputs:
+              connectionType: "AzureRM"
+              azureSubscription: $(azureSubscription)
+              appType: "functionAppLinux"
+              appName: $(appName)
+              resourceGroupName: $(rgName)
+              package: "$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip"
+              runtimeStack: "PYTHON|$(pythonVersion)"
+              # zipDeploy extracts the zip into wwwroot (writable, unlike
+              # runFromPackage which mounts it read-only). Deps are already in
+              # the zip and Oryx is disabled -> simple extraction, no remote
+              # build (impossible anyway: no PyPI access from the VNet).
+              deploymentMethod: "zipDeploy"
+              # ---- SECRET INJECTION -------------------------------------------
+              # Each -NAME "$(NAME)" becomes an app setting on the Function App.
+              # Non-secret values may also come from the config YAML; secrets
+              # MUST be secret pipeline variables. Adapt this list to the app's
+              # own .env (settings model).
+              appSettings: >-
+                -SCM_DO_BUILD_DURING_DEPLOYMENT false
+                -ENABLE_ORYX_BUILD false
+                -AZURE_TENANT_ID "$(AZURE_TENANT_ID)"
+                -AZURE_CLIENT_ID "$(AZURE_CLIENT_ID)"
+                -AZURE_CLIENT_SECRET "$(AZURE_CLIENT_SECRET)"
+                -OPENAI_API_KEY "$(OPENAI_API_KEY)"
+                -AZURE_POSTGRES_HOST "$(AZURE_POSTGRES_HOST)"
+                -AZURE_POSTGRES_USER "$(AZURE_POSTGRES_USER)"
+                -AZURE_POSTGRES_PASSWORD "$(AZURE_POSTGRES_PASSWORD)"
+
+  # -------------------------------------------------------------------
+  # 3) Wiki : sync docs/ -> Azure DevOps wiki
+  # -------------------------------------------------------------------
+  - template: wiki-stage.yaml

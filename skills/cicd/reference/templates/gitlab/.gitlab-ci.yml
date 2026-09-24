@@ -1,0 +1,42 @@
+# Generic GitLab CI/CD skeleton — quality (merge gate) -> deploy -> docs.
+# Replace <PLACEHOLDER> values. Secrets come from CI/CD variables (Masked + Protected), NEVER here.
+# Cloud deploy step: see reference/cloud/<provider>.md. Wiki sync: see wiki-sync.gitlab-ci.yml.
+
+stages:
+  - quality
+  - deploy
+  - docs
+
+default:
+  image: python:3.12-slim
+
+include:
+  - local: wiki-sync.gitlab-ci.yml
+
+# --- Merge gate: must pass before an MR can merge (enable "Pipelines must succeed") ---
+quality:
+  stage: quality
+  script:
+    - pip install --quiet uv
+    - uv sync --all-extras
+    - uv run pre-commit run --all-files
+    - uv run pytest
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+# --- Deploy: only after a merge to a protected environment branch ---
+deploy:
+  stage: deploy
+  environment:
+    name: $CI_COMMIT_BRANCH
+  script:
+    # Per-env target comes from config/$CI_COMMIT_BRANCH; secrets from CI/CD variables.
+    # Drop the cloud deploy step here — see reference/cloud/<provider>.md. Example (GCP Cloud Run):
+    #   gcloud run deploy <SERVICE> --region <REGION> \
+    #     --set-secrets "API_KEY=api-key:latest" --set-env-vars "ENV=$CI_COMMIT_BRANCH"
+    - echo "Deploy to $CI_COMMIT_BRANCH"
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(dev|uat|main|master)$/
+      when: on_success
+    - when: never

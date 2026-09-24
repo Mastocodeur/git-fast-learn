@@ -1,0 +1,201 @@
+# =====================================================================
+# Node/Next.js Web App — ONE pipeline for ALL environments.
+# Point Azure DevOps at this file (Pipelines > Edit > Settings > YAML path).
+#
+# One pipeline, N environments. Everything is shared EXCEPT the target
+# service, selected by branch below (../config/<env>.yaml).
+# Flow (always): Build (merge gate) -> Deploy to the env service -> Wiki.
+#
+# Add an environment  = add its branch here + a ../config/<env>.yaml holding
+#                       ONLY that env's service (subscription/app/rg).
+# Match the branch names below to your repo's real branches.
+# =====================================================================
+
+trigger:
+  branches:
+    include:
+      - dev
+      - uat
+      - main # prod
+
+pr: none # YAML PR trigger off; the merge gate is a branch-policy build validation
+
+variables:
+  # --- Per-environment SERVICE target (the ONLY thing that differs) ---
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/dev') }}:
+      - template: ../config/dev.yaml
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/uat') }}:
+      - template: ../config/uat.yaml
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+      - template: ../config/prod.yaml
+
+  # --- Shared non-secret config (identical for EVERY environment) ---
+  - name: ORGA
+    value: "<AZURE_DEVOPS_ORG>"
+  - name: PROJECT
+    value: "<AZURE_DEVOPS_PROJECT>"
+  - name: REPO
+    value: "<REPO_NAME>"
+  - name: GIT_USER_EMAIL
+    value: "ci@adecco.fr"
+  - name: GIT_USER_NAME
+    value: "Azure DevOps CI"
+
+stages:
+  - stage: Build
+    displayName: Build
+    jobs:
+      - job: BuildJob
+        displayName: Build and Package Node.js App
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: "21.6.1"
+            displayName: "Install Node.js"
+
+          - script: |
+              cd <APP_DIR>
+              # Build-time only, NON-SECRET placeholders. Real secrets are
+              # injected into the Web App at deploy time (see Deploy stage),
+              # not baked into the build.
+              echo "BuildId=$(Build.BuildId)" >> .env.production
+            displayName: "Write build env"
+            workingDirectory: "$(Build.SourcesDirectory)/<APP_DIR>"
+
+          - script: |
+              npm install --force
+              npx prisma generate
+              npm run build
+            displayName: "Install and Build App"
+            workingDirectory: "$(Build.SourcesDirectory)/<APP_DIR>"
+
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: "$(Build.SourcesDirectory)/<APP_DIR>"
+              includeRootFolder: false
+              archiveType: "zip"
+              archiveFile: "$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip"
+              replaceExistingArchive: true
+
+          - publish: "$(Build.ArtifactStagingDirectory)"
+            artifact: build_package
+
+  - stage: Deploy
+    displayName: Deploy to App Service
+    dependsOn: Build
+    # Deploy only on a real push to the branch (merge completed), never in a
+    # PR build. Under a branch-policy build validation, only `Build` runs as
+    # the merge gate — no deployment of non-merged code.
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+      - job: DeployJob
+        displayName: Deploy to Azure Web App
+        steps:
+          - download: current
+            artifact: build_package
+
+          - task: AzureWebApp@1
+            displayName: Deploy Azure Web App
+            inputs:
+              azureSubscription: $(azureSubscription)
+              appType: "webAppLinux"
+              appName: $(appName)
+              package: "$(Pipeline.Workspace)/build_package/$(Build.BuildId).zip"
+              runtimeStack: "NODE|22-lts"
+              StartupCommand: "bash startup.sh"
+              # ---- SECRET INJECTION into the Web App at deploy time ----------
+              # Each -NAME "$(NAME)" becomes an app setting. Secrets MUST be
+              # secret pipeline variables. Adapt to the app's own env.
+              appSettings: >-
+                -OPENAI_API_KEY "$(OPENAI_API_KEY)"
+                -AZURE_OPENAI_ENDPOINT "$(AZURE_OPENAI_ENDPOINT)"
+                -OPENAI_API_VERSION "$(OPENAI_API_VERSION)"
+                -DATABASE_URL "$(DATABASE_URL)"
+
+  # -------------------------------------------------------------------
+  # Wiki : sync docs/ -> Azure DevOps wiki (idempotent, content diff)
+  # -------------------------------------------------------------------
+  - stage: Wiki
+    displayName: Deploy Wiki
+    dependsOn: Build
+    # Like the Deploy stage: sync the wiki only on a real push (merge), not
+    # in a PR build validation.
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+      - job: sync_wiki
+        displayName: Provision & sync wiki
+        steps:
+          - checkout: self
+          - bash: |
+              set -uo pipefail
+
+              missing=""
+              [ -z "${WIKI_TOKEN:-}" ] && missing="$missing WIKI_TOKEN"
+              [ -z "${ORGA:-}" ]       && missing="$missing ORGA"
+              [ -z "${PROJECT:-}" ]    && missing="$missing PROJECT"
+              [ -z "${REPO:-}" ]       && missing="$missing REPO"
+              if [ -n "$missing" ]; then
+                echo "##[error]Missing/empty pipeline variable(s):$missing"
+                exit 1
+              fi
+              echo "Context: ORGA=$ORGA | PROJECT=$PROJECT | REPO=$REPO | token=${#WIKI_TOKEN} chars"
+
+              ORG_URL="https://dev.azure.com/${ORGA}"
+              PROJECT_ENC="${PROJECT// /%20}"
+              API="api-version=7.1"
+
+              HTTP=$(curl -s -o /tmp/wikis.json -w "%{http_code}" -u ":${WIKI_TOKEN}" "${ORG_URL}/${PROJECT_ENC}/_apis/wiki/wikis?${API}")
+              echo "GET _apis/wiki/wikis -> HTTP $HTTP"
+              if [ "$HTTP" != "200" ]; then
+                echo "##[error]Wiki API call failed (HTTP $HTTP). Check PAT scopes (Code R&W + Wiki R&W), ORGA/PROJECT."
+                head -c 500 /tmp/wikis.json; echo
+                exit 1
+              fi
+
+              WIKI_NAME=$(python3 -c "import json; v=json.load(open('/tmp/wikis.json')).get('value',[]); w=[x for x in v if x.get('type')=='projectWiki']; print(w[0]['name'] if w else '')")
+
+              if [ -z "$WIKI_NAME" ]; then
+                echo "No project wiki found -> creating."
+                PID=$(curl -sf -u ":${WIKI_TOKEN}" "${ORG_URL}/_apis/projects/${PROJECT_ENC}?${API}" | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
+                WIKI_NAME="${REPO}.wiki"
+                HTTP=$(curl -s -o /tmp/create.json -w "%{http_code}" -u ":${WIKI_TOKEN}" -X POST \
+                  -H "Content-Type: application/json" \
+                  -d "{\"type\":\"projectWiki\",\"name\":\"${WIKI_NAME}\",\"projectId\":\"${PID}\"}" \
+                  "${ORG_URL}/${PROJECT_ENC}/_apis/wiki/wikis?${API}")
+                echo "POST create wiki -> HTTP $HTTP"
+                if [ "$HTTP" != "200" ] && [ "$HTTP" != "201" ]; then
+                  echo "##[error]Wiki creation failed (HTTP $HTTP). Create it once manually then re-run."
+                  head -c 500 /tmp/create.json; echo
+                  exit 1
+                fi
+              fi
+              echo "Target wiki: $WIKI_NAME"
+
+              WIKI_NAME_ENC="${WIKI_NAME// /%20}"
+              git config --global user.email "${GIT_USER_EMAIL:-ci@adecco.fr}"
+              git config --global user.name "${GIT_USER_NAME:-Azure DevOps CI}"
+              if ! git clone "https://${WIKI_TOKEN}@dev.azure.com/${ORGA}/${PROJECT_ENC}/_git/${WIKI_NAME_ENC}" wiki; then
+                echo "##[error]git clone of the wiki failed. Check PAT scope Code (Read & Write)."
+                exit 1
+              fi
+
+              rsync -av --delete --exclude='.git/' docs/ wiki/
+              cd wiki
+              if [ -n "$(git status --porcelain)" ]; then
+                git add .
+                git commit -m "docs: update wiki from docs (CI)"
+                git push origin
+                echo "Wiki updated."
+              else
+                echo "No change to push to the wiki."
+              fi
+            displayName: Provision & sync wiki
+            env:
+              WIKI_TOKEN: $(WIKI_TOKEN)   # SECRET pipeline variable (PAT: Code R&W + Wiki R&W)
+              ORGA: $(ORGA)
+              PROJECT: $(PROJECT)
+              REPO: $(REPO)
+              GIT_USER_EMAIL: $(GIT_USER_EMAIL)
+              GIT_USER_NAME: $(GIT_USER_NAME)

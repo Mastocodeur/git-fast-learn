@@ -1,0 +1,10 @@
+# NON-SECRET config for PROD. Never put a secret here.
+variables:
+  - name: azureSubscription
+    value: "<AZU-EUR-FR-PRD-APPSPN>"
+  - name: appName
+    value: "<WAS-EUR-FR-PRD-WEB-APP>"
+  - name: rgName
+    value: "<RG-EUR-FR-PRD-APP>"
+  - name: environment
+    value: production
