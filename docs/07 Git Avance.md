@@ -14,6 +14,7 @@ Ce chapitre couvre les commandes Git avancées que tout développeur senior doit
 - [git blame — trouver qui a écrit quoi](#git-blame--trouver-qui-a-écrit-quoi)
 - [git worktree — plusieurs branches simultanément](#git-worktree--plusieurs-branches-simultanément)
 - [git submodule — dépôts imbriqués](#git-submodule--dépôts-imbriqués)
+- [Les refs — internals et plumbing](#les-refs--internals-et-plumbing)
 
 ---
 
@@ -336,3 +337,124 @@ git submodule status
 ```
 
 **Note :** les submodules ont une réputation d'être complexes à maintenir. Dans la plupart des cas modernes, un gestionnaire de paquets (pip, npm, cargo) ou un monorepo est préférable.
+
+---
+
+## Les refs — internals et plumbing
+
+Une **ref** est un pointeur nommé vers un commit. Tout ce que Git appelle "branche", "tag" ou "HEAD" est en réalité une ref stockée dans `.git/refs/`.
+
+```
+.git/
+├── HEAD                      ← ref symbolique → refs/heads/main
+└── refs/
+    ├── heads/main            ← branche locale (contient un SHA)
+    ├── remotes/origin/main   ← branche remote
+    └── tags/v1.0             ← tag léger
+```
+
+Ces commandes sont des outils **plumbing** (bas niveau). On ne les utilise pas dans un workflow quotidien — elles servent à écrire des scripts, des hooks avancés, ou à comprendre les internals de Git.
+
+### git show-ref — lister toutes les refs locales
+
+```bash
+git show-ref
+# a3f9c12 refs/heads/main
+# b1d0e45 refs/heads/feature/login
+# c2a1b33 refs/tags/v1.0
+
+git show-ref --heads              # uniquement les branches
+git show-ref --tags               # uniquement les tags
+git show-ref main                 # filtrer par nom
+git show-ref --verify refs/heads/main   # vérifie qu'une ref existe (exit 1 si non)
+git show-ref -d                   # dereference les tags annotés (montre le commit pointé)
+```
+
+### git for-each-ref — lister et formater les refs (scripting)
+
+La version programmable de `show-ref`. Indispensable pour écrire des scripts sur les branches.
+
+```bash
+# Format personnalisé
+git for-each-ref --format='%(refname:short) %(objectname:short)' refs/heads/
+# main       a3f9c12
+# feature/login b1d0e45
+
+# Trier les branches par date de dernier commit
+git for-each-ref --sort=-committerdate --format='%(refname:short)' refs/heads/
+
+# Voir auteur et message du dernier commit par branche
+git for-each-ref --format='%(refname:short) | %(authorname) | %(subject)' refs/heads/
+```
+
+Champs utiles : `%(refname)`, `%(refname:short)`, `%(objectname:short)`, `%(authorname)`, `%(committerdate:relative)`, `%(subject)`, `%(upstream:short)`.
+
+### git symbolic-ref — lire et écrire HEAD
+
+`HEAD` n'est pas un SHA mais une ref symbolique qui pointe vers la branche courante.
+
+```bash
+git symbolic-ref HEAD
+# refs/heads/main
+
+git symbolic-ref --short HEAD     # → main (format court, équivalent à git branch --show-current)
+```
+
+En pratique, c'est ce que les hooks et scripts utilisent pour connaître la branche active.
+
+### git update-ref — créer ou déplacer une ref de façon sûre
+
+Permet de manipuler des refs sans passer par les commandes porcelain. Git l'utilise en interne à chaque `git commit`.
+
+```bash
+# Créer une branche de backup pointant sur HEAD
+git update-ref refs/heads/backup-before-rebase HEAD
+
+# Supprimer une ref
+git update-ref -d refs/heads/vieille-branche
+
+# Déplacer une ref avec vérification : n'opère que si la valeur actuelle est <old-sha>
+git update-ref refs/heads/main <new-sha> <old-sha>
+```
+
+### git check-ref-format — valider un nom de ref
+
+Utile dans un hook pre-receive ou pre-push pour rejeter des noms de branches invalides.
+
+```bash
+git check-ref-format "refs/heads/feat/login"   # exit 0 = valide
+git check-ref-format "refs/heads/ma branche"   # exit 1 = invalide (espace)
+git check-ref-format --branch "feat/login"     # valide un nom de branche directement
+```
+
+### git ls-remote — lister les refs d'un remote (sans fetch)
+
+Inspecte un dépôt distant sans rien télécharger localement.
+
+```bash
+git ls-remote origin
+git ls-remote --heads origin      # uniquement les branches distantes
+git ls-remote --tags origin       # uniquement les tags distants
+```
+
+Cas d'usage : vérifier qu'une branche ou un tag existe sur le remote avant de lancer un pipeline.
+
+### git pack-refs — compacter les refs
+
+Git stocke chaque ref dans un fichier séparé. Sur un repo avec des centaines de branches, cela ralentit les opérations. `pack-refs` les regroupe dans `.git/packed-refs`.
+
+```bash
+git pack-refs --all    # compacte toutes les refs (heads + tags)
+```
+
+Git le fait automatiquement via `git gc`. À appeler manuellement sur un très vieux repo qui n'a jamais été nettoyé.
+
+### Cas d'usage réels
+
+| Besoin | Commande |
+|---|---|
+| Lister les 5 branches les plus récentes | `git for-each-ref --sort=-committerdate --format='%(refname:short)' refs/heads/ \| head -5` |
+| Savoir sur quelle branche on est dans un script | `git symbolic-ref --short HEAD` |
+| Vérifier qu'une branche distante existe | `git ls-remote --heads origin feat/ma-branche` |
+| Créer un backup de branche avant un rebase risqué | `git update-ref refs/heads/backup HEAD` |
+| Valider un nom de branche dans un hook | `git check-ref-format --branch "$BRANCH_NAME"` |
