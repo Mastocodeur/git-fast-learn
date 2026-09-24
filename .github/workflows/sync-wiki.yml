@@ -1,0 +1,34 @@
+name: Sync Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**.md"
+  workflow_dispatch:
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du repo principal
+        uses: actions/checkout@v4
+
+      - name: Cloner le wiki
+        run: |
+          git clone https://oauth2:${{ secrets.WIKI_TOKEN }}@github.com/Mastocodeur/git-fast-learn.wiki.git wiki
+
+      - name: Copier les fichiers Markdown vers le wiki
+        run: |
+          find docs/ -maxdepth 1 -name "*.md" \
+            -exec cp {} wiki/ \;
+
+      - name: Commiter et pusher vers le wiki
+        run: |
+          cd wiki
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --staged --quiet || git commit -m "sync: mise à jour depuis le repo principal (${{ github.sha }})"
+          git push
